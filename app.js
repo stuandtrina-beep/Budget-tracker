@@ -1,9 +1,7 @@
 document.addEventListener('DOMContentLoaded', () => {
-    // State management
     let transactions = JSON.parse(localStorage.getItem('transactions')) || [];
     let portfolio = JSON.parse(localStorage.getItem('portfolio')) || [];
 
-    // Tab Navigation Logic
     const tabButtons = document.querySelectorAll('.tab-btn');
     const tabContents = document.querySelectorAll('.tab-content');
 
@@ -17,7 +15,6 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     });
 
-    // DOM Elements
     const transactionForm = document.getElementById('transaction-form');
     const transactionList = document.getElementById('transaction-list');
     const portfolioForm = document.getElementById('portfolio-form');
@@ -28,14 +25,12 @@ document.addEventListener('DOMContentLoaded', () => {
     const totalExpensesEl = document.getElementById('total-expenses');
     const portfolioValueEl = document.getElementById('portfolio-value');
 
-    // Initialize UI
     function init() {
         renderTransactions();
         renderPortfolio();
         updateMetrics();
     }
 
-    // Transactions Handlers
     transactionForm.addEventListener('submit', (e) => {
         e.preventDefault();
         const desc = document.getElementById('desc').value;
@@ -73,7 +68,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 <td>${escapeHTML(tx.desc)}</td>
                 <td>
                     <strong>${isIncome ? '+' : '-'}£${tx.amount.toFixed(2)}</strong> 
-                    <span style="font-size: 0.8rem; padding: 2px 6px; border-radius: 4px; background: ${isIncome ? '#dcfce7; color: #166534;' : '#fee2e2; color: #991b1b;}; margin-left: 6px;">
+                    <span style="font-size: 0.75rem; padding: 2px 6px; border-radius: 4px; background: ${isIncome ? '#e0f2fe; color: #0369a1;' : '#f1f5f9; color: #334155;}; margin-left: 6px; font-weight: bold;">
                         ${isIncome ? 'INCOME' : 'EXPENSE'}
                     </span>
                 </td>
@@ -84,7 +79,6 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // Portfolio Handlers
     portfolioForm.addEventListener('submit', (e) => {
         e.preventDefault();
         const name = document.getElementById('asset-name').value;
@@ -129,7 +123,6 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // Calculations & Metrics
     function updateMetrics() {
         let income = 0;
         let expenses = 0;
