@@ -1,41 +1,125 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Budget & Portfolio Tracker</title>
-  <link rel="stylesheet" href="styles.css">
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Advanced Budget & Portfolio Tracker</title>
+    <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-  <div id="app">
-    <div id="content"></div>
-    <nav class="nav">
-      <button class="nav-btn active" data-page="dashboard">
-        <span class="nav-icon">🏠</span>
-        <span>Home</span>
-      </button>
-      <button class="nav-btn" data-page="transactions">
-        <span class="nav-icon">💸</span>
-        <span>Transactions</span>
-      </button>
-      <button class="nav-btn" data-page="budgets">
-        <span class="nav-icon">📊</span>
-        <span>Budgets</span>
-      </button>
-      <button class="nav-btn" data-page="portfolio">
-        <span class="nav-icon">📈</span>
-        <span>Portfolio</span>
-      </button>
-      <button class="nav-btn" data-page="settings">
-        <span class="nav-icon">⚙️</span>
-        <span>Settings</span>
-      </button>
-    </nav>
-  </div>
-  <div id="modal-overlay" class="modal-overlay hidden">
-    <div id="modal" class="modal"></div>
-  </div>
-  <script src="app.js"></script>
+    <div class="app-container">
+        <header>
+            <h1>Financial Command Center</h1>
+            <p class="subtitle">Manage expenses, income, and long-term portfolio growth in one place.</p>
+        </header>
+
+        <nav class="tab-nav">
+            <button class="tab-btn active" data-target="dashboard-tab">Dashboard</button>
+            <button class="tab-btn" data-target="transactions-tab">Transactions</button>
+            <button class="tab-btn" data-target="portfolio-tab">Portfolio & ETFs</button>
+        </nav>
+
+        <!-- DASHBOARD TAB -->
+        <main id="dashboard-tab" class="tab-content active">
+            <section class="metrics-grid">
+                <div class="metric-card">
+                    <h3>Total Balance</h3>
+                    <p id="total-balance" class="metric-value">£0.00</p>
+                </div>
+                <div class="metric-card">
+                    <h3>Monthly Income</h3>
+                    <p id="total-income" class="metric-value income">£0.00</p>
+                </div>
+                <div class="metric-card">
+                    <h3>Monthly Expenses</h3>
+                    <p id="total-expenses" class="metric-value expense">£0.00</p>
+                </div>
+                <div class="metric-card">
+                    <h3>Portfolio Value</h3>
+                    <p id="portfolio-value" class="metric-value">£0.00</p>
+                </div>
+            </section>
+
+            <section class="quick-forms">
+                <div class="form-card">
+                    <h2>Quick Transaction</h2>
+                    <form id="transaction-form">
+                        <div class="input-group">
+                            <input type="text" id="desc" placeholder="Description (e.g., Groceries)" required>
+                        </div>
+                        <div class="input-group">
+                            <input type="number" id="amount" placeholder="Amount (£)" step="0.01" required>
+                        </div>
+                        <div class="input-group">
+                            <select id="type">
+                                <option value="expense">Expense</option>
+                                <option value="income">Income</option>
+                            </select>
+                        </div>
+                        <button type="submit" class="btn primary-btn">Add Transaction</button>
+                    </form>
+                </div>
+            </section>
+        </main>
+
+        <!-- TRANSACTIONS TAB -->
+        <main id="transactions-tab" class="tab-content">
+            <h2>Transaction History</h2>
+            <div class="table-container">
+                <table id="transaction-table">
+                    <thead>
+                        <tr>
+                            <th>Description</th>
+                            <th>Amount</th>
+                            <th>Type</th>
+                            <th>Action</th>
+                        </tr>
+                    </thead>
+                    <tbody id="transaction-list">
+                        <!-- Dynamic items go here -->
+                    </tbody>
+                </table>
+            </div>
+        </main>
+
+        <!-- PORTFOLIO TAB -->
+        <main id="portfolio-tab" class="tab-content">
+            <h2>Investment & ETF Tracker</h2>
+            <div class="form-card">
+                <h3>Add Asset / Holding</h3>
+                <form id="portfolio-form">
+                    <div class="input-group">
+                        <input type="text" id="asset-name" placeholder="Asset Name (e.g., VUSA ETF)" required>
+                    </div>
+                    <div class="input-group">
+                        <input type="number" id="asset-shares" placeholder="Number of Units/Shares" step="any" required>
+                    </div>
+                    <div class="input-group">
+                        <input type="number" id="asset-price" placeholder="Current Price per Unit (£)" step="0.01" required>
+                    </div>
+                    <button type="submit" class="btn primary-btn">Add Holding</button>
+                </form>
+            </div>
+
+            <div class="table-container" style="margin-top: 20px;">
+                <table id="portfolio-table">
+                    <thead>
+                        <tr>
+                            <th>Asset</th>
+                            <th>Shares</th>
+                            <th>Price (£)</th>
+                            <th>Total Value (£)</th>
+                            <th>Action</th>
+                        </tr>
+                    </thead>
+                    <tbody id="portfolio-list">
+                        <!-- Dynamic holdings go here -->
+                    </tbody>
+                </table>
+            </div>
+        </main>
+    </div>
+
+    <script src="app.js"></script>
 </body>
 </html>
