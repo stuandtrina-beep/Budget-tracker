@@ -1,159 +1,215 @@
-document.addEventListener('DOMContentLoaded', () => {
-    let transactions = JSON.parse(localStorage.getItem('transactions')) || [];
-    let portfolio = JSON.parse(localStorage.getItem('portfolio')) || [];
+// ==========================================
+// 1. APPLICATION STATE & LOCAL STORAGE
+// ==========================================
+const STORAGE_KEY = 'BUDGET_PORTFOLIO_APP_STATE_V1';
 
-    const tabButtons = document.querySelectorAll('.tab-btn');
-    const tabContents = document.querySelectorAll('.tab-content');
+let appState = {
+    settings: { darkMode: false, baseCurrency: 'GBP', finnhubApiKey: '' },
+    accounts: [
+        { id: 'acc_1', name: 'Main Bank', type: 'bank', balance: 0 },
+        { id: 'acc_2', name: 'ISA Portfolio', type: 'investment', balance: 0 }
+    ],
+    categories: [
+        { id: 'cat_1', name: 'Groceries', type: 'expense' },
+        { id: 'cat_2', name: 'Salary', type: 'income' }
+    ],
+    transactions: [],
+    holdings: [],
+    budget: { period: 'monthly', limit: 1000, categoryLimits: {} }
+};
 
-    tabButtons.forEach(button => {
-        button.addEventListener('click', () => {
-            tabButtons.forEach(btn => btn.classList.remove('active'));
-            tabContents.forEach(content => content.classList.remove('active'));
+function loadState() {
+    try {
+        const saved = localStorage.getItem(STORAGE_KEY);
+        if (saved) {
+            appState = JSON.parse(saved);
+        }
+    } catch (e) {
+        console.error('Failed to load state from localStorage, using defaults.', e);
+    }
+}
 
-            button.classList.add('active');
-            document.getElementById(button.dataset.target).classList.add('active');
+function saveState() {
+    try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(appState));
+    } catch (e) {
+        console.error('Failed to save state to localStorage.', e);
+    }
+}
+
+// ==========================================
+// 2. SAFE UI RENDERING & NAVIGATION
+// ==========================================
+function initApp() {
+    try {
+        loadState();
+        setupNavigation();
+        setupCsvUpload();
+        renderDashboard();
+        console.log('App initialized successfully.');
+    } catch (e) {
+        console.error('Error during app initialization:', e);
+    }
+}
+
+function setupNavigation() {
+    const navButtons = document.querySelectorAll('[data-target-view]');
+    navButtons.forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            const targetView = e.currentTarget.getAttribute('data-target-view');
+            switchView(targetView);
         });
     });
+}
 
-    const transactionForm = document.getElementById('transaction-form');
-    const transactionList = document.getElementById('transaction-list');
-    const portfolioForm = document.getElementById('portfolio-form');
-    const portfolioList = document.getElementById('portfolio-list');
-
-    const totalBalanceEl = document.getElementById('total-balance');
-    const totalIncomeEl = document.getElementById('total-income');
-    const totalExpensesEl = document.getElementById('total-expenses');
-    const portfolioValueEl = document.getElementById('portfolio-value');
-
-    function init() {
-        renderTransactions();
-        renderPortfolio();
-        updateMetrics();
+function switchView(viewId) {
+    document.querySelectorAll('.view-section').forEach(section => {
+        section.style.display = 'none';
+    });
+    const target = document.getElementById(viewId);
+    if (target) {
+        target.style.display = 'block';
+    } else {
+        console.warn(`Target view not found: ${viewId}`);
     }
+}
 
-    transactionForm.addEventListener('submit', (e) => {
-        e.preventDefault();
-        const desc = document.getElementById('desc').value;
-        const amount = parseFloat(document.getElementById('amount').value);
-        const type = document.getElementById('type').value;
+// ==========================================
+// 3. WORKING CSV UPLOAD & PARSER
+// ==========================================
+function setupCsvUpload() {
+    const fileInput = document.getElementById('csvFileInput');
+    const dropZone = document.getElementById('csvDropZone');
 
-        const newTx = {
-            id: Date.now(),
-            desc,
-            amount,
-            type
-        };
+    if (!fileInput) return;
 
-        transactions.push(newTx);
-        saveAndRefresh();
-        transactionForm.reset();
+    fileInput.addEventListener('change', (event) => {
+        const file = event.target.files[0];
+        if (file) {
+            processCsvFile(file);
+        }
     });
 
-    window.deleteTransaction = function(id) {
-        transactions = transactions.filter(tx => tx.id !== id);
-        saveAndRefresh();
+    if (dropZone) {
+        dropZone.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            dropZone.classList.add('drag-over');
+        });
+
+        dropZone.addEventListener('dragleave', () => {
+            dropZone.classList.remove('drag-over');
+        });
+
+        dropZone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            dropZone.classList.remove('drag-over');
+            if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+                processCsvFile(e.dataTransfer.files[0]);
+            }
+        });
+    }
+}
+
+function processCsvFile(file) {
+    const reader = new FileReader();
+    
+    reader.onload = function(e) {
+        try {
+            const text = e.target.result;
+            parseCsvData(text);
+        } catch (err) {
+            console.error('Error parsing CSV file content:', err);
+            alert('Could not parse the CSV file. Please check the file format.');
+        }
     };
 
-    function renderTransactions() {
-        transactionList.innerHTML = '';
-        if (transactions.length === 0) {
-            transactionList.innerHTML = `<tr><td colspan="4" style="text-align: center; color: #64748b;">No transactions recorded yet.</td></tr>`;
-            return;
-        }
-
-        transactions.forEach(tx => {
-            const isIncome = tx.type === 'income';
-            const tr = document.createElement('tr');
-            tr.innerHTML = `
-                <td>${escapeHTML(tx.desc)}</td>
-                <td>
-                    <strong>${isIncome ? '+' : '-'}£${tx.amount.toFixed(2)}</strong> 
-                    <span style="font-size: 0.75rem; padding: 2px 6px; border-radius: 4px; background: ${isIncome ? '#e0f2fe; color: #0369a1;' : '#f1f5f9; color: #334155;}; margin-left: 6px; font-weight: bold;">
-                        ${isIncome ? 'INCOME' : 'EXPENSE'}
-                    </span>
-                </td>
-                <td style="text-transform: capitalize;">${tx.type}</td>
-                <td><button class="delete-btn" onclick="deleteTransaction(${tx.id})">Delete</button></td>
-            `;
-            transactionList.appendChild(tr);
-        });
-    }
-
-    portfolioForm.addEventListener('submit', (e) => {
-        e.preventDefault();
-        const name = document.getElementById('asset-name').value;
-        const shares = parseFloat(document.getElementById('asset-shares').value);
-        const price = parseFloat(document.getElementById('asset-price').value);
-
-        const newAsset = {
-            id: Date.now(),
-            name,
-            shares,
-            price
-        };
-
-        portfolio.push(newAsset);
-        saveAndRefresh();
-        portfolioForm.reset();
-    });
-
-    window.deleteAsset = function(id) {
-        portfolio = portfolio.filter(item => item.id !== id);
-        saveAndRefresh();
+    reader.onerror = function() {
+        console.error('Failed to read file.');
+        alert('Error reading file.');
     };
 
-    function renderPortfolio() {
-        portfolioList.innerHTML = '';
-        if (portfolio.length === 0) {
-            portfolioList.innerHTML = `<tr><td colspan="5" style="text-align: center; color: #64748b;">No portfolio assets added yet.</td></tr>`;
-            return;
+    reader.readAsText(file);
+}
+
+function parseCsvData(csvText) {
+    const lines = csvText.split(/\r\n|\n/);
+    if (lines.length === 0) return;
+
+    // Basic CSV Line Parser handling quotes and commas
+    const parsedRows = lines.map(line => {
+        const row = [];
+        let insideQuote = false;
+        let entry = '';
+        
+        for (let i = 0; i < line.length; i++) {
+            const char = line[i];
+            if (char === '"') {
+                insideQuote = !insideQuote;
+            } else if (char === ',' && !insideQuote) {
+                row.push(entry.trim());
+                entry = '';
+            } else {
+                entry += char;
+            }
         }
+        row.push(entry.trim());
+        return row;
+    }).filter(row => row.length > 1 || row[0] !== '');
 
-        portfolio.forEach(item => {
-            const totalVal = item.shares * item.price;
-            const tr = document.createElement('tr');
-            tr.innerHTML = `
-                <td>${escapeHTML(item.name)}</td>
-                <td>${item.shares}</td>
-                <td>£${item.price.toFixed(2)}</td>
-                <td><strong>£${totalVal.toFixed(2)}</strong></td>
-                <td><button class="delete-btn" onclick="deleteAsset(${item.id})">Delete</button></td>
-            `;
-            portfolioList.appendChild(tr);
-        });
+    if (parsedRows.length > 1) {
+        const headers = parsedRows[0].map(h => h.toLowerCase());
+        const dataRows = parsedRows.slice(1);
+        
+        console.log('Parsed Headers:', headers);
+        console.log(`Successfully parsed ${dataRows.length} rows.`);
+        
+        // Import holdings or transactions based on detected headers
+        importHoldingsFromCsv(headers, dataRows);
+    } else {
+        alert('The CSV file appears to be empty or formatted incorrectly.');
     }
+}
 
-    function updateMetrics() {
-        let income = 0;
-        let expenses = 0;
+function importHoldingsFromCsv(headers, rows) {
+    // Example mapping logic for brokerage exports (like Interactive Investor)
+    const symbolIdx = headers.findIndex(h => h.includes('symbol') || h.includes('ticker') | h.includes('code'));
+    const qtyIdx = headers.findIndex(h => h.includes('quantity') || h.includes('shares') || h.includes('holding'));
+    const nameIdx = headers.findIndex(h => h.includes('name') || h.includes('description') || h.includes('security'));
 
-        transactions.forEach(tx => {
-            if (tx.type === 'income') income += tx.amount;
-            else expenses += tx.amount;
-        });
+    let importedCount = 0;
 
-        const balance = income - expenses;
-        const portfolioTotal = portfolio.reduce((acc, item) => acc + (item.shares * item.price), 0);
+    rows.forEach(row => {
+        const name = nameIdx > -1 ? row[nameIdx] : 'Unknown Asset';
+        const symbol = symbolIdx > -1 ? row[symbolIdx] : 'UNKNOWN';
+        const quantity = qtyIdx > -1 ? parseFloat(row[qtyIdx]) || 0 : 0;
 
-        totalBalanceEl.textContent = `£${balance.toFixed(2)}`;
-        totalIncomeEl.textContent = `£${income.toFixed(2)}`;
-        totalExpensesEl.textContent = `£${expenses.toFixed(2)}`;
-        portfolioValueEl.textContent = `£${portfolioTotal.toFixed(2)}`;
+        if (symbol && quantity > 0) {
+            appState.holdings.push({
+                id: 'hold_' + Math.random().toString(36.substring(2, 9)),
+                name,
+                symbol,
+                quantity,
+                costBasis: 0,
+                currentPrice: 0
+            });
+            importedCount++;
+        }
+    });
+
+    saveState();
+    renderDashboard();
+    alert(`Successfully imported ${importedCount} items into your portfolio!`);
+}
+
+// ==========================================
+// 4. RENDERING & UI UPDATES
+// ==========================================
+function renderDashboard() {
+    const portfolioCountEl = document.getElementById('portfolioCount');
+    if (portfolioCountEl) {
+        portfolioCountEl.textContent = appState.holdings.length;
     }
+}
 
-    function saveAndRefresh() {
-        localStorage.setItem('transactions', JSON.stringify(transactions));
-        localStorage.setItem('portfolio', JSON.stringify(portfolio));
-        renderTransactions();
-        renderPortfolio();
-        updateMetrics();
-    }
-
-    function escapeHTML(str) {
-        return str.replace(/[&<>'"]/g, 
-            tag => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[tag] || tag)
-        );
-    }
-
-    init();
-});
+// Run init when DOM is fully loaded to prevent un-clickable UI bugs
+document.addEventListener('DOMContentLoaded', initApp);
