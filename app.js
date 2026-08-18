@@ -67,11 +67,15 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         transactions.forEach(tx => {
+            const isIncome = tx.type === 'income';
             const tr = document.createElement('tr');
             tr.innerHTML = `
                 <td>${escapeHTML(tx.desc)}</td>
-                <td style="color: ${tx.type === 'income' ? 'var(--success)' : 'var(--danger)'}">
-                    ${tx.type === 'income' ? '+' : '-'}£${tx.amount.toFixed(2)}
+                <td>
+                    <strong>${isIncome ? '+' : '-'}£${tx.amount.toFixed(2)}</strong> 
+                    <span style="font-size: 0.8rem; padding: 2px 6px; border-radius: 4px; background: ${isIncome ? '#dcfce7; color: #166534;' : '#fee2e2; color: #991b1b;}; margin-left: 6px;">
+                        ${isIncome ? 'INCOME' : 'EXPENSE'}
+                    </span>
                 </td>
                 <td style="text-transform: capitalize;">${tx.type}</td>
                 <td><button class="delete-btn" onclick="deleteTransaction(${tx.id})">Delete</button></td>
